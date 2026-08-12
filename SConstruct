@@ -84,11 +84,12 @@ def CheckNSIS(context):
             nsis_dir = os.path.abspath("nsis-bin")
             if not os.path.exists(nsis_dir):
                 print("Downloading NSIS portable...")
-                urllib.request.urlretrieve("https://github.com/negrutiu/nsis-bin/releases/download/v3.10/nsis-3.10.zip", "nsis.zip")
+                url = "https://downloads.sourceforge.net/project/nsis/NSIS%203/3.10/nsis-3.10.zip"
+                urllib.request.urlretrieve(url, "nsis.zip")
                 with zipfile.ZipFile("nsis.zip", 'r') as zip_ref:
                     zip_ref.extractall(nsis_dir)
-            if os.path.exists(os.path.join(nsis_dir, "makensis.exe")):
-                context.env["makensis"]=File(os.path.join(nsis_dir, "makensis.exe"))
+            if os.path.exists(os.path.join(nsis_dir, "nsis-3.10", "makensis.exe")):
+                context.env["makensis"]=File(os.path.join(nsis_dir, "nsis-3.10", "makensis.exe"))
                 result=1
     context.Result(result)
     return result
