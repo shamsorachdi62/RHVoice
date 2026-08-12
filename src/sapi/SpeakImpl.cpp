@@ -80,6 +80,14 @@ namespace RHVoice
 
       bool is_arabic = (p.profile.language.find("Arabic") != std::string::npos || p.profile.name == "zayd");
       ArabicTextProcessor arabic_processor;
+      
+      if (is_arabic && !p.profile.empty()) {
+          auto lang_iter = p.profile.primary()->get_language();
+          if (lang_iter != doc.get_engine().get_languages().end()) {
+              std::string data_path = lang_iter->get_data_path();
+              arabic_processor.initialize(data_path);
+          }
+      }
 
       for(const SPVTEXTFRAG* frag=p.input;frag;frag=frag->pNext)
         {
@@ -87,7 +95,7 @@ namespace RHVoice
           std::wstring fragment_text = original_text;
 
           if (is_arabic) {
-              fragment_text = arabic_processor.normalize(original_text);
+              fragment_text = arabic_processor.process(original_text);
           }
 
           tts_markup markup;

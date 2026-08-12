@@ -5,12 +5,18 @@
 #include <unordered_map>
 #include <sstream>
 #include <cwctype>
+#include <onnxruntime_cxx_api.h>
+#include "vocab.hpp"
 
 namespace RHVoice {
 namespace sapi {
 
 struct ArabicTextProcessor::Impl {
     bool initialized = false;
+    
+    std::unique_ptr<Ort::Env> env;
+    std::unique_ptr<Ort::Session> session;
+    Ort::SessionOptions session_options;
     
     std::unordered_map<std::wstring, std::wstring> char_names;
     std::unordered_map<std::wstring, std::wstring> diacritic_names;
@@ -160,6 +166,78 @@ std::wstring ArabicTextProcessor::normalize(const std::wstring& text) {
     } catch (const std::regex_error&) {}
     
     return t;
+}
+
+void ArabicTextProcessor::initialize(const std::string& model_dir) {
+    if (pImpl->env) return;
+    try {
+        pImpl->env = std::make_unique<Ort::Env>(ORT_LOGGING_LEVEL_WARNING, "ArabicDiacritizer");
+        pImpl->session_options.SetIntraOpNumThreads(1);
+        pImpl->session_options.SetInterOpNumThreads(1);
+        
+        std::string model_path = model_dir + "\\model.onnx";
+        std::wstring w_model_path(model_path.begin(), model_path.end());
+        pImpl->session = std::make_unique<Ort::Session>(*(pImpl->env), w_model_path.c_str(), pImpl->session_options);
+    } catch (...) {
+        pImpl->session.reset();
+    }
+}
+
+std::wstring ArabicTextProcessor::process(const std::wstring& text) {
+    std::wstring normalized = normalize(text);
+    if (normalized.empty() || !pImpl->session) return normalized;
+
+    std::vector<int64_t> input_ids;
+    input_ids.reserve(normalized.length());
+    for (wchar_t c : normalized) {
+        std::wstring s(1, c);
+        auto it = char_to_idx.find(s);
+        if (it != char_to_idx.end()) {
+            input_ids.push_back(it->second);
+        } else {
+            input_ids.push_back(1); // <UNK>
+        }
+    }
+
+    if (input_ids.empty()) return normalized;
+
+    std::vector<int64_t> input_shape = {1, static_cast<int64_t>(input_ids.size())};
+    Ort::MemoryInfo memory_info = Ort::MemoryInfo::CreateCpu(OrtArenaAllocator, OrtMemTypeDefault);
+    Ort::Value input_tensor = Ort::Value::CreateTensor<int64_t>(
+        memory_info, input_ids.data(), input_ids.size(), input_shape.data(), input_shape.size()
+    );
+
+    const char* input_names[] = {"input"};
+    const char* output_names[] = {"gated_cls"};
+
+    try {
+        auto output_tensors = pImpl->session->Run(
+            Ort::RunOptions{nullptr}, input_names, &input_tensor, 1, output_names, 1
+        );
+
+        int64_t* output_data = output_tensors.front().GetTensorMutableData<int64_t>();
+        size_t count = output_tensors.front().GetTensorTypeAndShapeInfo().GetElementCount();
+
+        std::wstring diacritized;
+        diacritized.reserve(normalized.length() * 2);
+        
+        for (size_t i = 0; i < count && i < normalized.length(); ++i) {
+            wchar_t base_char = normalized[i];
+            diacritized += base_char;
+            
+            bool is_letter = (base_char >= L'ء' && base_char <= L'ي') || base_char == L'ٱ' || base_char == L'ـ';
+            if (is_letter) {
+                int64_t diac_id = output_data[i];
+                auto it = idx_to_diac.find(diac_id);
+                if (it != idx_to_diac.end() && !it->second.empty()) {
+                    diacritized += it->second;
+                }
+            }
+        }
+        return diacritized;
+    } catch (...) {
+        return normalized;
+    }
 }
 
 } // namespace sapi
