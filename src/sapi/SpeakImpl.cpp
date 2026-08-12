@@ -78,7 +78,7 @@ namespace RHVoice
       doc.speech_settings.absolute.volume=1;
       doc.speech_settings.relative.volume=get_volume();
 
-      bool is_arabic = (p.profile.language.find("Arabic") != std::string::npos || p.profile.name == "zayd");
+      bool is_arabic = (p.profile.get_name().find("Arabic") != std::string::npos || p.profile.get_name() == "zayd");
       ArabicTextProcessor arabic_processor;
       
       if (is_arabic && !p.profile.empty()) {
