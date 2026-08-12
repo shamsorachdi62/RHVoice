@@ -31,11 +31,12 @@ jobs:
     - name: Build RHVoice for Windows
       run: scons
 
-    - name: Upload SAPI DLL Artifact
+    - name: Upload SAPI EXE Installer
       uses: actions/upload-artifact@v4
       with:
-        name: RHVoice-SAPI-DLL
+        name: RHVoice-SAPI-Installer
         path: |
           build/windows/x86_64/sapi/RHVoiceSvr.dll
           build/windows/x86/sapi/RHVoiceSvr.dll
           external/onnxruntime/lib/onnxruntime.dll
+          build/windows/packages/sapi/*.exe
