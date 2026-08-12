@@ -78,9 +78,18 @@ def CheckNSIS(context):
                 result=1
         except WindowsError:
             pass
-        if result==0 and os.path.exists(r"C:\Program Files (x86)\NSIS\makensis.exe"):
-            context.env["makensis"]=File(r"C:\Program Files (x86)\NSIS\makensis.exe")
-            result=1
+        if result==0:
+            import urllib.request
+            import zipfile
+            nsis_dir = os.path.abspath("nsis-bin")
+            if not os.path.exists(nsis_dir):
+                print("Downloading NSIS portable...")
+                urllib.request.urlretrieve("https://github.com/negrutiu/nsis-bin/releases/download/v3.10/nsis-3.10.zip", "nsis.zip")
+                with zipfile.ZipFile("nsis.zip", 'r') as zip_ref:
+                    zip_ref.extractall(nsis_dir)
+            if os.path.exists(os.path.join(nsis_dir, "makensis.exe")):
+                context.env["makensis"]=File(os.path.join(nsis_dir, "makensis.exe"))
+                result=1
     context.Result(result)
     return result
 
