@@ -157,10 +157,9 @@ def create_languages_user_var():
     names=[name for name in sorted(os.listdir(langs_dir.path)) if os.path.isdir(langs_dir.Entry(name).path)]
     langs=[name.lower() for name in names]
     name_map=dict(zip(names,langs))
-    def_langs=langs
+    def_langs=["arabic"]
     if sys.platform!="win32":
-        def_langs=[lang for lang in langs if lang not in["georgian"]]
-        print("Georgian language is skipped because of non-free license")
+        def_langs=[lang for lang in def_langs if lang not in["georgian"]]
     help="Which languages to install"
     return ListVariable("languages",help,def_langs,langs,name_map)
 
