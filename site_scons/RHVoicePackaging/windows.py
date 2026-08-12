@@ -19,7 +19,12 @@ import codecs
 import os.path
 from collections import OrderedDict
 import uuid
-from lxml import etree
+import subprocess
+try:
+    from lxml import etree
+except ImportError:
+    subprocess.check_call(["pip", "install", "lxml"])
+    from lxml import etree
 from SCons.Script import Dir
 from .common import *
 
