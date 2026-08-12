@@ -78,6 +78,9 @@ def CheckNSIS(context):
                 result=1
         except WindowsError:
             pass
+        if result==0 and os.path.exists(r"C:\Program Files (x86)\NSIS\makensis.exe"):
+            context.env["makensis"]=File(r"C:\Program Files (x86)\NSIS\makensis.exe")
+            result=1
     context.Result(result)
     return result
 
