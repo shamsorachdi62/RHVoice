@@ -35,8 +35,27 @@ dll_src=["com.cpp",
          "voice_token.cpp",
          "dll.def"]
 
-local_env.Append(CPPPATH=['../../external/onnxruntime/include'])
-local_env.Append(LIBPATH=['../../external/onnxruntime/lib'])
+import urllib.request
+import zipfile
+import os
+
+arch = local_env.get("TARGET_ARCH", "x86")
+if arch == "x86_64":
+    onnx_name = "onnxruntime-win-x64-1.17.1"
+else:
+    onnx_name = "onnxruntime-win-x86-1.17.1"
+
+onnx_dir = local_env.Dir("#external/" + onnx_name).abspath
+if not os.path.exists(onnx_dir):
+    url = f"https://github.com/microsoft/onnxruntime/releases/download/v1.17.1/{onnx_name}.zip"
+    zip_path = os.path.join(local_env.Dir("#external").abspath, f"{onnx_name}.zip")
+    urllib.request.urlretrieve(url, zip_path)
+    with zipfile.ZipFile(zip_path, 'r') as zip_ref:
+        zip_ref.extractall(local_env.Dir("#external").abspath)
+
+local_env.Append(CPPPATH=[f'#external/{onnx_name}/include'])
+local_env.Append(LIBPATH=[f'#external/{onnx_name}/lib'])
+
 # Note: we need to link onnxruntime if it's there
 local_env.Prepend(LIBS=["onnxruntime"])
 

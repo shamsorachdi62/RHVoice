@@ -53,6 +53,9 @@ class core_packager(RHVoicePackaging.windows.msi_packager):
 
 	def create_com_server_component_element(self):
 		cmp,file=self.create_file_component_element(RHVoicePackaging.common.file_info(self.dll,"lib",None,{}))
+		onnx_name = "onnxruntime-win-x64-1.17.1" if self.x64_flag else "onnxruntime-win-x86-1.17.1"
+		onnx_dll = env.Dir("#external").Dir(onnx_name).Dir("lib").File("onnxruntime.dll")
+		self.create_file_component_element(RHVoicePackaging.common.file_info(onnx_dll,"lib",None,{}))
 		for clsid in [self.engine_clsid,self.token_enum_clsid]:
 			cls=self.SubElement(file,"Class",empty=True)
 			cls.set("Id",clsid)
