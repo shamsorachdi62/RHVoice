@@ -29,8 +29,16 @@ dll_src=["com.cpp",
          "main.cpp",
          "registry.cpp",
          "SpeakImpl.cpp",
+         "ArabicTextProcessor.cpp",
+         "ArabicNum2Words.cpp",
          "tts_base.cpp",
          "voice_token.cpp",
          "dll.def"]
+
+local_env.Append(CPPPATH=['../../external/onnxruntime/include'])
+local_env.Append(LIBPATH=['../../external/onnxruntime/lib'])
+# Note: we need to link onnxruntime if it's there
+local_env.Prepend(LIBS=["onnxruntime"])
+
 lib=local_env.BuildLibrary(dll_name,dll_src)
 local_env.Depends(lib,libcore)

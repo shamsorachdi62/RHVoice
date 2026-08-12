@@ -19,6 +19,7 @@
 #include "utils.hpp"
 #include "text_iterator.hpp"
 #include "SpeakImpl.hpp"
+#include "ArabicTextProcessor.hpp"
 
 namespace RHVoice
 {
@@ -39,6 +40,14 @@ namespace RHVoice
       doc.speech_settings.relative.rate=get_rate();
       doc.speech_settings.absolute.volume=1;
       doc.speech_settings.relative.volume=get_volume();
+
+      // Check if profile is Arabic
+      bool is_arabic = (p.profile.language.find("Arabic") != std::string::npos || p.profile.name == "zayd");
+      ArabicTextProcessor arabic_processor;
+      if (is_arabic) {
+          arabic_processor.initialize("model.onnx", "vocab.json");
+      }
+
       for(const SPVTEXTFRAG* frag=p.input;frag;frag=frag->pNext)
         {
           text_iterator text_start(frag,0);

@@ -1,0 +1,39 @@
+name: Build RHVoice SAPI with ONNX
+
+on:
+  push:
+    branches: [ "master", "main", "sapi-arabic" ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+
+    - name: Install SCons
+      run: pip install scons
+
+    - name: Download and extract ONNX Runtime
+      run: |
+        Invoke-WebRequest -Uri "https://github.com/microsoft/onnxruntime/releases/download/v1.17.1/onnxruntime-win-x64-1.17.1.zip" -OutFile "onnxruntime.zip"
+        Expand-Archive -Path "onnxruntime.zip" -DestinationPath "external"
+        Rename-Item -Path "external\onnxruntime-win-x64-1.17.1" -NewName "onnxruntime"
+
+    - name: Build RHVoice for Windows
+      run: scons
+
+    - name: Upload SAPI DLL Artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: RHVoice-SAPI-DLL
+        path: |
+          build/windows/x86_64/sapi/RHVoiceSvr.dll
+          build/windows/x86/sapi/RHVoiceSvr.dll
+          external/onnxruntime/lib/onnxruntime.dll
