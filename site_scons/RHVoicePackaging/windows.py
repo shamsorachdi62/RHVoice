@@ -37,7 +37,7 @@ class windows_packager(packager):
 	def __init__(self,name,outdir,env,display_name,version):
 		self.short_name=name
 		package_name="{}-v{}-setup".format(name,version)
-		super(windows_packager,self).__init__(package_name,outdir.Dir(self.get_file_ext()),env,self.get_file_ext())
+		super(windows_packager,self).__init__(package_name,outdir,env,self.get_file_ext())
 		self.display_name=display_name
 		self.version=version
 		self.tmp_dir=self.outdir.Dir("tmp")
