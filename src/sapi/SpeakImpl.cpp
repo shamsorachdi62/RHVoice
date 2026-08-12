@@ -20,11 +20,48 @@
 #include "text_iterator.hpp"
 #include "SpeakImpl.hpp"
 #include "ArabicTextProcessor.hpp"
+#include "core/utf.hpp"
 
 namespace RHVoice
 {
   namespace sapi
   {
+    namespace {
+      class modified_text_iterator: public std::iterator<std::forward_iterator_tag, const utf8::uint32_t>
+      {
+      public:
+        modified_text_iterator(): code_point('\0'), base_offset(0) {}
+        modified_text_iterator(std::wstring::const_iterator it, std::wstring::const_iterator range_start, std::wstring::const_iterator range_end, ULONG base_offset):
+          code_point('\0'), start(it), end(it), range_start(range_start), range_end(range_end), base_offset(base_offset) {
+            ++(*this);
+        }
+        const utf8::uint32_t& operator*() const { return code_point; }
+        bool operator==(const modified_text_iterator& other) const { return start == other.start; }
+        bool operator!=(const modified_text_iterator& other) const { return !(*this == other); }
+        modified_text_iterator& operator++() {
+          if(end == range_end) start = end;
+          else {
+            std::wstring::const_iterator tmp = end;
+            code_point = RHVoice::utf::next(tmp, range_end);
+            start = end; end = tmp;
+          }
+          return *this;
+        }
+        modified_text_iterator operator++(int) {
+          modified_text_iterator tmp = *this;
+          ++(*this);
+          return tmp;
+        }
+        std::size_t offset() const {
+          return base_offset + std::distance(range_start, start);
+        }
+      private:
+        utf8::uint32_t code_point;
+        std::wstring::const_iterator start, end, range_start, range_end;
+        ULONG base_offset;
+      };
+    }
+
     const double SpeakImpl::rate_table[]={0.333333,0.372041,0.415244,0.463463,0.517282,0.577350,0.644394,0.719223,0.802742,0.895958,1.000000,
                                           1.116123,1.245731,1.390389,1.551846,1.732051,1.933182,2.157669,2.408225,2.687875,3.000000};
     const double SpeakImpl::pitch_table[]={0.500000,0.514651,0.529732,0.545254,0.561231,0.577676,0.594604,0.612027,0.629961,0.648420,0.667420,0.686977,
@@ -41,17 +78,18 @@ namespace RHVoice
       doc.speech_settings.absolute.volume=1;
       doc.speech_settings.relative.volume=get_volume();
 
-      // Check if profile is Arabic
       bool is_arabic = (p.profile.language.find("Arabic") != std::string::npos || p.profile.name == "zayd");
       ArabicTextProcessor arabic_processor;
-      if (is_arabic) {
-          arabic_processor.initialize("model.onnx", "vocab.json");
-      }
 
       for(const SPVTEXTFRAG* frag=p.input;frag;frag=frag->pNext)
         {
-          text_iterator text_start(frag,0);
-          text_iterator text_end(frag,frag->ulTextLen);
+          std::wstring original_text(frag->pTextStart, frag->ulTextLen);
+          std::wstring fragment_text = original_text;
+
+          if (is_arabic) {
+              fragment_text = arabic_processor.normalize(original_text);
+          }
+
           tts_markup markup;
           switch(frag->State.eAction)
             {
@@ -62,7 +100,16 @@ namespace RHVoice
               markup.prosody.volume=convert_volume(frag->State.Volume);
               if(frag->State.eAction==SPVA_SpellOut)
                 markup.say_as=content_chars;
-              doc.add_text(text_start,text_end,markup);
+
+              if (fragment_text == original_text) {
+                  text_iterator text_start(frag,0);
+                  text_iterator text_end(frag,frag->ulTextLen);
+                  doc.add_text(text_start,text_end,markup);
+              } else {
+                  modified_text_iterator text_start(fragment_text.begin(), fragment_text.begin(), fragment_text.end(), frag->ulTextSrcOffset);
+                  modified_text_iterator text_end(fragment_text.end(), fragment_text.begin(), fragment_text.end(), frag->ulTextSrcOffset);
+                  doc.add_text(text_start,text_end,markup);
+              }
               break;
             case SPVA_Bookmark:
               doc.add_mark(utils::wstring_to_string(frag->pTextStart,frag->ulTextLen));
