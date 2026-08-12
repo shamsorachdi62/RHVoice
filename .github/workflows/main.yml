@@ -1,7 +1,7 @@
 name: Build RHVoice SAPI with ONNX
 
 on:
-                push:
+  push:
     branches: [ "master", "main", "sapi-arabic" ]
   workflow_dispatch:
 
@@ -36,4 +36,4 @@ jobs:
         path: |
           build/windows/x86_64/sapi/RHVoiceSvr.dll
           build/windows/x86/sapi/RHVoiceSvr.dll
-          external/onnxruntime/lib/onnxruntime.dll        
+          external/onnxruntime/lib/onnxruntime.dll    
